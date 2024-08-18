@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Macro #5</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-size: auto;
+        }
+        header {
+            text-align: center;
+            padding: 20px;
+            background-color: transparent;
+        }
+        #filter {
+            float: right;
+            margin-right: 20px;
+        }
+        #addButton {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            cursor: pointer;
+        }
+        #addButton:hover {
+            transform: scale(1.1);
+        }
+        #activitiesContainer {
+            font-size: auto;
+            margin: 20px;
+            padding: 20px;
+            background-color: transparent;
+            display: flex;
+            flex-direction: row;
+            gap: 5px;
+        }
+        .activity {
+            position: relative;
+            width: 15%;
+            height: 40%;
+            margin-bottom: 10px;
+            padding: 25px;
+            background-color: #e0e0e0;
+            cursor: pointer;
+            font-size: 90%;
+        }
+        .activity:hover {
+            background-color: #c0c0c0;
+        }
+        .panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 20px;
+            display: none;
+        }
+        .delete {
+            position: absolute;
+            top:-5px; 
+            right:-5px;
+        }
+        .moveLB {
+            font-size: 70%;
+            padding: 0%;
+            
+        }
+        .moveRB {
+            font-size: 70%;
+            padding: 0%;
+        }
+        .delete img{
+            display: none;
+        }
+
+    </style>
+</head>
+<body style="background-image: url('./images/corkboard.jpg');">
+    <header>
+        <h1>Seasonal To-Do List</h1>
+        <select id="filter">
+            <option value="all">Show All Seasons</option>
+            <option value="spring">Spring</option>
+            <option value="summer">Summer</option>
+            <option value="autumn">Autumn</option>
+            <option value="winter">Winter</option>
+        </select>
+    </header>
+    <div id="addButton">
+        <img src="./images/add_button.png" alt="Add Button">
+    </div>
+    <div id="activitiesContainer"></div>
+
+    <div id="addPanel" class="panel">
+        <form id="add-form">
+            <h3>Add New Item</h3>
+            <label for="title">Title:</label><br>
+            <input type="text" id="title" name="title" required><br>
+            <label for="category">Category:</label><br>
+            <select id="category" name="category" required>
+                <option value="">Select Category</option>
+                <option value="spring">Spring</option>
+                <option value="summer">Summer</option>
+                <option value="autumn">Autumn</option>
+                <option value="winter">Winter</option>
+            </select><br>
+            <label for="description">Description:</label><br>
+            <textarea id="description" name="description" required></textarea><br>
+            <button type="button" id="cancel">Cancel</button>
+            <button type="submit">Save</button>
+            <p id="error" style="color: red; display: none;">ERROR!Fill out all fields(title cannot have periods!)</p>
+        </form>
+    </div>
+    <div id="activityTemp" class="panel">
+        <h2 id="infoTitle"></h2>
+        <p id="infoCategory"></p>
+        <p id="infoDescription"></p>
+        <hr></hr>
+        <p id="infoCreated"></p>
+        <p id="infoAccessed"></p>
+        <button id="closeInfo">Close</button>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function(event) {
+            const addButton = document.getElementById("addButton");
+            const addPanell = document.getElementById("addPanel");
+            const cancelBut = document.getElementById("cancel");
+            const errorMessage = document.getElementById("error");
+            const addForm = document.getElementById("add-form");
+            //notes
+            const activitiesContainer = document.getElementById("activitiesContainer");
+            //clicked notes
+            const activityTemplate = document.getElementById("activityTemp");
+            const filterSelect = document.getElementById("filter");
+            //add button clicker
+            addButton.addEventListener("click", function(event) {
+                addPanell.style.display = "block";
+            });
+            //cancel button clicker
+            cancelBut.addEventListener("click", function(event) {
+                addPanell.style.display = "none";
+                addForm.reset();
+                errorMessage.style.display = "none";
+            });
+            //submit button clicker
+            addForm.addEventListener("submit", function(event) {
+                event.preventDefault();
+                const title = document.getElementById("title").value;
+                const category = document.getElementById("category").value;
+                const description = document.getElementById("description").value;
+                if (title === "" || category === "" || description === "") {
+                    errorMessage.style.display = "block";
+                } else {
+                    //revert the filter back to show all seasons
+                    const selectedOption = filterSelect.value;
+                    if (selectedOption !== "all") {
+                        filterSelect.value = "all";
+                        //dispatch to force call an event listener
+                        filterSelect.dispatchEvent(new Event('change'));
+                    }
+                    createActivity(title, category, description);
+                    addPanell.style.display = "none";
+                    addForm.reset();
+                    errorMessage.style.display = "none";
+                }
+            });
+            //update after every activity note is created function
+            function updateMoveButtons() {
+                const activities = activitiesContainer.querySelectorAll(".activity");
+                activities.forEach(function(activity) {
+                    const moveLeftBtn = activity.querySelector(".moveLB");
+                    const moveRightBtn = activity.querySelector(".moveRB");
+                    if (activity.previousElementSibling === null && activity.nextElementSibling === null){
+                        moveLeftBtn.style.display = "none";
+                        moveRightBtn.style.display = "none";
+                    } else if (activity.previousElementSibling === null) {
+                        moveLeftBtn.style.display = "none";
+                        moveRightBtn.style.display = "block";
+                    } else if (activity.nextElementSibling === null) {
+                        moveLeftBtn.style.display = "block";
+                        moveRightBtn.style.display = "none";
+                    } else {
+                        moveLeftBtn.style.display = "block";
+                        moveRightBtn.style.display = "block";
+                    }
+                });
+            }
+            //creates note
+            function createActivity(title, category, description) {
+                const activity = document.createElement("div");
+                activity.classList.add("activity");
+                if (activity.previousElementSibling === null && activity.nextElementSibling === null){
+                    activity.innerHTML = `
+                    <h3>${title}</h3>
+                    <p style="display: none;">${category}</p>
+                    <p style="display: none;">${description}</p>
+                    <img src="./images/delete_button.png" class="delete" alt="Delete Button">
+                    <button class="moveLB" style="display: none;">MOVE LEFT</button>
+                    <button class="moveRB" style="display: none;">MOVE RIGHT</button>`;
+                }
+                if (activity.previousElementSibling === null){
+                    activity.innerHTML = `
+                    <h3>${title}</h3>
+                    <p style="display: none;">${category}</p>
+                    <p style="display: none;">${description}</p>
+                    <img src="./images/delete_button.png" class="delete" alt="Delete Button">
+                    <button class="moveLB" style="display: none;">MOVE LEFT</button>
+                    <button class="moveRB">MOVE RIGHT</button>`;
+                } else if (activity.nextElementSibling === null){
+                    activity.innerHTML = `
+                    <h3>${title}</h3>
+                    <p style="display: none;">${category}</p>
+                    <p style="display: none;">${description}</p>
+                    <img src="./images/delete_button.png" class="delete" alt="Delete Button">
+                    <button class="moveLB">MOVE LEFT</button>
+                    <button class="moveRB" style="display: none;">MOVE RIGHT</button>`;
+                } else{
+                    activity.innerHTML = `
+                    <h3>${title}</h3>
+                    <p style="display: none;">${category}</p>
+                    <p style="display: none;">${description}</p>
+                    <img src="./images/delete_button.png" class="delete" alt="Delete Button">
+                    <button class="moveLB">MOVE LEFT</button>
+                    <button class="moveRB">MOVE RIGHT</button>`;
+                }
+                activity.dataset.created = new Date();
+                activitiesContainer.appendChild(activity);
+                if (category.toLowerCase().includes("spring")) {
+                    activity.style.backgroundColor = "green";
+                } else if (category.toLowerCase().includes("summer")) {
+                    activity.style.backgroundColor = "red";
+                } else if (category.toLowerCase().includes("autumn")) {
+                    activity.style.backgroundColor = "yellow";
+                } else if (category.toLowerCase().includes("winter")) {
+                    activity.style.backgroundColor = "blue";
+                }
+                //delete button functions and clicker
+                const deleteBtn = activity.querySelector(".delete");
+                deleteBtn.addEventListener("click", function(event) {
+                    activitiesContainer.removeChild(activity);
+                    updateMoveButtons();
+                });
+                activity.addEventListener("mouseenter", function(event) {
+                    deleteBtn.style.display = "block";
+                });
+                activity.addEventListener("mouseleave", function(event) {
+                    deleteBtn.style.display = "none";
+                });
+                //move left button clicker
+                const moveLeftBtn = activity.querySelector(".moveLB");
+                moveLeftBtn.addEventListener("click", function(event) {
+                    event.stopPropagation();
+                    if (activity.previousElementSibling) {
+                        activitiesContainer.insertBefore(activity, activity.previousElementSibling);
+                    }
+                    updateMoveButtons();
+                });
+                //move right button clicker
+                const moveRightBtn = activity.querySelector(".moveRB");
+                moveRightBtn.addEventListener("click", function(event) {
+                    event.stopPropagation();
+                    if (activity.nextElementSibling) {
+                        activitiesContainer.insertBefore(activity.nextElementSibling, activity);
+                    }
+                    updateMoveButtons();
+                });
+                // Adding click event to show info panel
+                activity.addEventListener("click", function(event) {
+                    if (!event.target.classList.contains("delete")) {
+                        infoPanel(activity);
+                    }
+                });
+                updateMoveButtons();
+            }
+            //info panel
+            function infoPanel(activity) {
+                const infoTitlee = document.getElementById("infoTitle");
+                const infoCategoryy = document.getElementById("infoCategory");
+                const infoDescriptionn = document.getElementById("infoDescription");
+                const infoCreatedd = document.getElementById("infoCreated");
+                const infoAccessedd = document.getElementById("infoAccessed");
+                const closeInfoButton = document.getElementById("closeInfo");
+                infoTitlee.textContent = activity.querySelector("h3").textContent;
+                infoCategoryy.textContent = "Category: " + activity.querySelectorAll("p")[0].textContent;
+                infoDescriptionn.textContent = "Description: " + activity.querySelectorAll("p")[1].textContent;
+                infoCreatedd.textContent = "Created: " + new Date(activity.dataset.created).toLocaleString();
+                const currentTime = new Date();
+                activity.dataset.lastAccessed = currentTime;
+                infoAccessedd.textContent = "Last Accessed: " + currentTime.toLocaleString();
+                activityTemplate.style.display = "block";
+                activityTemplate.style.borderRadius = "25px";
+                //close info clicker
+                closeInfoButton.addEventListener("click", function(event) {
+                    activityTemplate.style.display = "none";
+                });
+            }
+            //filter function
+            filterSelect.addEventListener("change", function(event) {
+                const selectedOption = filterSelect.value;
+                const activities = document.querySelectorAll(".activity");
+                activities.forEach(function(activity) {
+                    const isCompleted = activity.classList.contains("completed");
+                    if ((selectedOption === "all" || activity.querySelector("p").textContent.toLowerCase().includes(selectedOption)) &&
+                        (selectedOption !== "completed" || isCompleted) &&
+                        (selectedOption !== "uncompleted" || !isCompleted)) {
+                        activity.style.display = "block";
+                    } else {
+                        activity.style.display = "none";
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
